@@ -77,17 +77,18 @@ struct ActiveSessionView: View {
                 .padding(.bottom, 24)
             }
             .scrollDismissesKeyboard(.interactively)
-            .toolbar {
-                // I tastierini numerici non hanno un tasto Invio.
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Fine") { hideKeyboard() }
-                }
-            }
 
             bottomPanel
         }
         .background(Theme.background.ignoresSafeArea())
+        // Sulla vista intera: i campi kg e ripetizioni stanno in bottomPanel, fuori dalla ScrollView.
+        // I tastierini numerici non hanno un tasto Invio.
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Fine") { hideKeyboard() }
+            }
+        }
         .onAppear {
             if currentID == nil {
                 currentID = (rows.first { $0.sets.count < $0.targetSets } ?? rows.first)?.id
