@@ -13,7 +13,7 @@ struct RootView: View {
             SessionTabView()
                 .tabItem { Label("Sessione", systemImage: "timer") }
                 .tag(1)
-            PlaceholderScreen(title: "Storico", subtitle: "Le tue sessioni e i progressi")
+            HistoryView()
                 .tabItem { Label("Storico", systemImage: "chart.bar") }
                 .tag(2)
         }
@@ -24,26 +24,6 @@ struct RootView: View {
             if ((try? modelContext.fetchCount(active)) ?? 0) > 0 {
                 tab = 1
             }
-        }
-    }
-}
-
-/// Schermata provvisoria: verrà sostituita dalle schermate del mockup.
-private struct PlaceholderScreen: View {
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        ZStack {
-            Theme.background.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 8) {
-                ScreenTitle(title)
-                Text(subtitle)
-                    .foregroundStyle(Theme.textSecondary)
-                Spacer()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
         }
     }
 }
