@@ -449,7 +449,9 @@ private struct ExerciseSessionCard: View {
     }
 
     private var visibleNotes: [ExerciseNote] {
+        // Le fissate prima: sono le indicazioni che valgono sempre.
         notes.filter { $0.isPinned || $0.session?.id == session.id }
+            .sorted { $0.isPinned && !$1.isPinned }
     }
 
     var body: some View {
@@ -531,23 +533,30 @@ private struct ExerciseSessionCard: View {
     /// Testo "Ultima volta": dice se l'esercizio della scheda era stato sostituito o fatto su un'altra macchina.
     private var lastTimeText: (title: String, detail: String, highlighted: Bool)? {
         var result: (String, String, Bool)?
+        var shownRowID: UUID?
         if let item = row.plannedItem, let last = SessionHistory.lastTime(for: item, excluding: session) {
             let day = last.date.shortDay
             if let sub = last.rows.first(where: \.isExerciseSubstitution) {
                 let detail = ["con \(sub.exercise?.name ?? "un altro esercizio")", sub.setupLabel, sub.setsSummary].compactMap { $0 }.joined(separator: " · ")
                 result = ("Ultima volta (\(day)) l'hai sostituito", detail, true)
+                shownRowID = sub.id
             } else if let change = last.rows.first(where: \.isMachineChange) {
                 let detail = ["su \(change.machine?.name ?? "nessuna macchina")", change.setsSummary].joined(separator: " · ")
                 result = ("Ultima volta (\(day)) hai cambiato macchina", detail, true)
+                shownRowID = change.id
             } else if let same = last.rows.first {
                 result = ("Ultima volta (\(day))", same.setsSummary, false)
+                shownRowID = same.id
             }
         }
-        // Se oggi è una variante, conta lo storico di questo esercizio su questa macchina.
+        // Se oggi è una variante, conta lo storico di questo esercizio su questa macchina,
+        // a meno che sia proprio la riga già descritta sopra.
         if row.isExerciseSubstitution || row.isMachineChange || row.plannedItem == nil,
            let key = row.historyKey,
-           let previous = SessionHistory.lastPerformance(of: key, in: context, excluding: session) {
-            let line = "\(row.exercise?.name ?? "") \(row.machine.map { "su \($0.name)" } ?? ""): \(previous.session?.startedAt.shortDay ?? "") · \(previous.setsSummary)"
+           let previous = SessionHistory.lastPerformance(of: key, in: context, excluding: session),
+           previous.id != shownRowID {
+            let name = [row.exercise?.name, row.machine.map { "su \($0.name)" }].compactMap { $0 }.joined(separator: " ")
+            let line = "\(name): \(previous.session?.startedAt.shortDay ?? "") · \(previous.setsSummary)"
             if let current = result {
                 result = (current.0, current.1 + "\nCon questa variante: " + line, current.2)
             } else {
@@ -649,15 +658,20 @@ private struct CardAction: View {
     let action: () -> Void
 
     var body: some View {
+        // Icona sopra il testo: affiancati, "Sostituisci" e "Macchina" venivano troncati su iPhone.
         Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.footnote.weight(.semibold))
-                .labelStyle(.titleAndIcon)
-                .lineLimit(1)
-                .foregroundStyle(Theme.text)
-                .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity, minHeight: 40)
-                .background(Theme.surface2, in: Capsule())
+            VStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.body)
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(Theme.text)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
     }

@@ -18,15 +18,22 @@ struct SubstituteSheet: View {
 
     private var original: Exercise? { row.plannedItem?.exercise }
 
-    private var sameGroup: [Exercise] {
-        guard let group = original?.muscleGroup else { return [] }
-        return exercises.filter { $0.muscleGroup == group && $0.id != original?.id && $0.id != row.exercise?.id }
+    private var pastIDs: Set<UUID> {
+        Set(pastSubstitutes.compactMap { $0.exercise?.id })
     }
 
+    private var sameGroup: [Exercise] {
+        guard let group = original?.muscleGroup else { return [] }
+        return exercises.filter { $0.muscleGroup == group && $0.id != original?.id && $0.id != row.exercise?.id && !pastIDs.contains($0.id) }
+    }
+
+    /// Senza ricerca mostra solo quello che non compare già nelle sezioni sopra.
     private var searchResults: [Exercise] {
-        exercises.filter { exercise in
+        let shownAbove = search.isEmpty ? pastIDs.union(sameGroup.map(\.id)) : []
+        return exercises.filter { exercise in
             exercise.id != original?.id
                 && exercise.id != row.exercise?.id
+                && !shownAbove.contains(exercise.id)
                 && (search.isEmpty || exercise.name.localizedCaseInsensitiveContains(search))
         }
     }
@@ -70,7 +77,7 @@ struct SubstituteSheet: View {
                 }
 
                 Section {
-                    if searchResults.isEmpty {
+                    if searchResults.isEmpty && (!search.isEmpty || (pastIDs.isEmpty && sameGroup.isEmpty)) {
                         Text("Nessun esercizio. Creane uno con Crea nuovo.")
                             .foregroundStyle(Theme.textSecondary)
                             .listRowBackground(Theme.surface)
@@ -79,7 +86,11 @@ struct SubstituteSheet: View {
                         choiceRow(exercise, detail: [exercise.muscleGroup, exercise.defaultMachine?.name].compactMap { $0 }.joined(separator: " · "))
                     }
                 } header: {
-                    SectionLabel(search.isEmpty ? "Tutto il catalogo" : "Risultati")
+                    if !search.isEmpty {
+                        SectionLabel("Risultati")
+                    } else if !searchResults.isEmpty {
+                        SectionLabel("Resto del catalogo")
+                    }
                 } footer: {
                     if let selected {
                         Text("Nello storico resta scritto che oggi hai fatto \(selected.name) al posto di \(original?.name ?? "").")
