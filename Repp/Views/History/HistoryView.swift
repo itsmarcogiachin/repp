@@ -46,7 +46,7 @@ struct HistoryView: View {
                 guard let key = row.historyKey, !seen.contains(key) else { continue }
                 seen.insert(key)
                 let best = allRows(for: key).flatMap(\.sets).map(\.weightKg).max() ?? 0
-                let machine = row.machine?.name ?? "senza macchina"
+                let machine = row.machine?.name ?? row.equipment?.name ?? "senza macchina"
                 result.append((key, row.exercise?.name ?? "Esercizio", "\(machine) · migliore \(best.kgString) kg"))
             }
         }
@@ -140,7 +140,10 @@ private struct WeekCard: View {
     }
 
     var body: some View {
-        let count = days.filter(trained(on:)).count
+        // Conta gli allenamenti, non i giorni: due sessioni nello stesso giorno sono due allenamenti.
+        let count = days.reduce(0) { total, day in
+            total + sessions.filter { calendar.isDate($0.startedAt, inSameDayAs: day) }.count
+        }
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 SectionLabel("Questa settimana")
@@ -200,14 +203,18 @@ extension WorkoutSession {
     var meta: String {
         let rows = exercises.filter { !$0.sets.isEmpty }
         let setCount = rows.reduce(0) { $0 + $1.sets.count }
-        let changes = rows.filter { $0.isExerciseSubstitution || $0.isMachineChange }.count
+        let substitutions = rows.filter(\.isExerciseSubstitution).count
+        let machineChanges = rows.filter { $0.isMachineChange && !$0.isExerciseSubstitution }.count
         var parts = [
             startedAt.shortDay.capitalizedFirst,
             rows.count == 1 ? "1 esercizio" : "\(rows.count) esercizi",
             setCount == 1 ? "1 serie" : "\(setCount) serie"
         ]
-        if changes > 0 {
-            parts.append(changes == 1 ? "1 sostituzione" : "\(changes) sostituzioni")
+        if substitutions > 0 {
+            parts.append(substitutions == 1 ? "1 sostituzione" : "\(substitutions) sostituzioni")
+        }
+        if machineChanges > 0 {
+            parts.append(machineChanges == 1 ? "1 cambio macchina" : "\(machineChanges) cambi macchina")
         }
         return parts.joined(separator: " · ")
     }
