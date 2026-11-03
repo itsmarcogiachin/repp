@@ -136,7 +136,7 @@ private struct TemplateItemRow: View {
             .buttonStyle(.plain)
 
             if isExpanded {
-                VStack(spacing: 10) {
+                VStack(spacing: 16) {
                     Stepper("Serie: \(item.targetSets)", value: $item.targetSets, in: 1...10)
                     Stepper("Ripetizioni: \(item.targetReps ?? 0)", value: repsBinding, in: 1...50)
                     HStack {
