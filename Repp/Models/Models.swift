@@ -104,6 +104,8 @@ final class WorkoutTemplate {
     @Attribute(.unique) var id: UUID
     var name: String
     var position: Int
+    /// Le schede eliminate vengono solo archiviate, così lo storico delle sessioni resta intatto.
+    var isArchived: Bool = false
     @Relationship(deleteRule: .cascade, inverse: \TemplateExercise.template)
     var items: [TemplateExercise] = []
     var createdAt: Date
@@ -134,16 +136,21 @@ final class TemplateExercise {
     var targetWeightKg: Double?
     var restSeconds: Int
 
-    init(exercise: Exercise, position: Int, targetSets: Int = 3, targetReps: Int? = nil, targetWeightKg: Double? = nil, restSeconds: Int = 90) {
+    /// Le relazioni (esercizio, macchina, attrezzo, scheda) si impostano dopo `context.insert`, con `configure(exercise:template:)`.
+    init(position: Int, targetSets: Int = 3, targetReps: Int? = 8, targetWeightKg: Double? = nil, restSeconds: Int = 90) {
         self.id = UUID()
-        self.exercise = exercise
-        self.machine = exercise.defaultMachine
-        self.equipment = exercise.defaultEquipment
         self.position = position
         self.targetSets = targetSets
         self.targetReps = targetReps
         self.targetWeightKg = targetWeightKg
         self.restSeconds = restSeconds
+    }
+
+    func configure(exercise: Exercise, template: WorkoutTemplate) {
+        self.exercise = exercise
+        self.machine = exercise.defaultMachine
+        self.equipment = exercise.defaultEquipment
+        self.template = template
     }
 }
 
