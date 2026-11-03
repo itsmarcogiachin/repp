@@ -53,11 +53,10 @@ struct TemplateEditorView: View {
             }
         }
         .reppListStyle()
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(template.name.isEmpty ? "Scheda" : template.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            EditButton()
-        }
+        .toolbar { toolbarContent }
         .sheet(isPresented: $showingPicker) {
             ExercisePickerView(alreadyInTemplate: Set(template.items.compactMap { $0.exercise?.id })) { exercises in
                 add(exercises)
@@ -70,6 +69,20 @@ struct TemplateEditorView: View {
             }
         } message: {
             Text("Le sessioni già fatte con questa scheda restano nello storico.")
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            EditButton()
+        }
+        // Il tastierino del carico non ha un tasto Invio: serve un modo per chiuderlo.
+        ToolbarItemGroup(placement: .keyboard) {
+            Spacer()
+            Button("Fine") {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
         }
     }
 
