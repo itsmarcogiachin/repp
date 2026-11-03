@@ -65,7 +65,8 @@ struct TemplateEditorView: View {
         .confirmationDialog("Eliminare la scheda?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Elimina", role: .destructive) {
                 template.isArchived = true
-                dismiss()
+                // Chiamato subito, dismiss chiuderebbe il dialogo invece di tornare all'elenco.
+                DispatchQueue.main.async { dismiss() }
             }
         } message: {
             Text("Le sessioni già fatte con questa scheda restano nello storico.")
