@@ -14,8 +14,11 @@ struct ActiveSessionView: View {
     @State private var sheet: SessionSheet?
     @State private var confirmingEnd = false
     @State private var restFinishedTick = 0
-    @AppStorage("repp.rest.endsAt") private var restEndsAt: Double = 0
-    @AppStorage("repp.rest.total") private var restTotal: Int = 0
+    @AppStorage(RestSettings.endsAtKey) private var restEndsAt: Double = 0
+    @AppStorage(RestSettings.totalKey) private var restTotal: Int = 0
+    @AppStorage(RestSettings.askQualityKey) private var askQuality = true
+    @AppStorage(RestSettings.alertsKey) private var restAlerts = true
+    @AppStorage(RestSettings.loadStepKey) private var loadStep = 2.5
 
     private enum SessionSheet: String, Identifiable {
         case substitute, machine, notes, addExercise
@@ -101,9 +104,12 @@ struct ActiveSessionView: View {
             let wait = restEndsAt - Date.now.timeIntervalSince1970
             guard wait > 0 else { return }
             try? await Task.sleep(for: .seconds(wait))
-            if !Task.isCancelled { restFinishedTick += 1 }
+            if !Task.isCancelled {
+                restFinishedTick += 1
+                await RestLiveActivity.end()
+            }
         }
-        .sensoryFeedback(.success, trigger: restFinishedTick)
+        .sensoryFeedback(trigger: restFinishedTick) { _, _ in restAlerts ? .success : nil }
         .sheet(item: $sheet) { kind in
             if let current {
                 switch kind {
@@ -268,7 +274,7 @@ struct ActiveSessionView: View {
     private var logPanel: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
-                ValueField(title: "Carico totale (kg)", text: $kgText, keyboard: .decimalPad, step: 2.5)
+                ValueField(title: "Carico totale (kg)", text: $kgText, keyboard: .decimalPad, step: loadStep)
                 ValueField(title: "Ripetizioni", text: $repsText, keyboard: .numberPad, step: 1)
             }
             Button(logButtonTitle, action: logSet)
@@ -323,7 +329,7 @@ struct ActiveSessionView: View {
         let set = SessionSet(setNumber: number, weightKg: kg, reps: reps, restSeconds: rest)
         context.insert(set)
         set.sessionExercise = row
-        qualitySetID = set.id
+        if askQuality { qualitySetID = set.id }
         hideKeyboard()
         startRest(seconds: row.restSeconds)
     }
@@ -379,25 +385,18 @@ struct ActiveSessionView: View {
     }
 
     private func startRest(seconds: Int) {
-        restTotal = seconds
-        restEndsAt = Date.now.addingTimeInterval(TimeInterval(seconds)).timeIntervalSince1970
-        RestNotifier.schedule(at: Date(timeIntervalSince1970: restEndsAt), nextSet: nextLabel.capitalizedFirst)
+        let next = nextLabel.capitalizedFirst
+        let name = session.template?.name ?? "Allenamento"
+        Task { await RestTimer.start(seconds: seconds, nextLabel: next, templateName: name) }
     }
 
     private func adjustRest(by delta: Int) {
-        let now = Date.now.timeIntervalSince1970
-        restEndsAt = max(now, restEndsAt + TimeInterval(delta))
-        restTotal = max(restTotal + delta, 1)
-        if restEndsAt > now {
-            RestNotifier.schedule(at: Date(timeIntervalSince1970: restEndsAt), nextSet: nextLabel.capitalizedFirst)
-        } else {
-            RestNotifier.cancel()
-        }
+        Task { await RestTimer.adjust(by: delta) }
     }
 
     private func skipRest() {
         restEndsAt = 0
-        RestNotifier.cancel()
+        Task { await RestTimer.skip() }
     }
 
     private func finish() {

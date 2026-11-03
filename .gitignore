@@ -15,3 +15,7 @@ build/
 
 # macOS
 .DS_Store
+
+# Generati da XcodeGen
+Repp/Info.plist
+ReppWidgets/Info.plist

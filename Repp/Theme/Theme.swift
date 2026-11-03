@@ -47,8 +47,15 @@ extension View {
 }
 
 extension Font {
-    /// Titoli e numeri: per ora il font di sistema; Archivo e Inter si aggiungono più avanti.
+    /// Titoli e numeri in Archivo (incluso nell'app, pesi da SemiBold a Black).
     static func display(_ size: CGFloat, weight: Font.Weight = .heavy) -> Font {
-        .system(size: size, weight: weight, design: .default)
+        let name: String
+        switch weight {
+        case .black: name = "Archivo-Black"
+        case .heavy: name = "Archivo-ExtraBold"
+        case .bold: name = "Archivo-Bold"
+        default: name = "Archivo-SemiBold"
+        }
+        return .custom(name, size: size)
     }
 }

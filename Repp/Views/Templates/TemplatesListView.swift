@@ -42,7 +42,7 @@ struct TemplatesListView: View {
             ScreenTitle("Schede")
             Spacer()
             NavigationLink {
-                MachinesEquipmentView()
+                SettingsView()
             } label: {
                 Image(systemName: "gearshape")
                     .font(.title3)

@@ -90,7 +90,7 @@ struct TemplateEditorView: View {
     private func add(_ exercises: [Exercise]) {
         var position = (template.items.map(\.position).max() ?? -1) + 1
         for exercise in exercises {
-            let item = TemplateExercise(position: position)
+            let item = TemplateExercise(position: position, restSeconds: RestSettings.defaultRest)
             context.insert(item)
             item.configure(exercise: exercise, template: template)
             position += 1

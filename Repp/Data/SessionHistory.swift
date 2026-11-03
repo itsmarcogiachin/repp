@@ -77,7 +77,7 @@ extension SessionExercise {
     }
 
     var restSeconds: Int {
-        plannedItem?.restSeconds ?? 90
+        plannedItem?.restSeconds ?? RestSettings.defaultRest
     }
 }
 
