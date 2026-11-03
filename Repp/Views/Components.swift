@@ -94,9 +94,9 @@ extension View {
 }
 
 extension Double {
-    /// 80 → "80", 77.5 → "77,5"
+    /// 80 → "80", 77.5 → "77,5", 1.25 → "1,25" (dischi da 1,25 kg)
     var kgString: String {
-        formatted(.number.precision(.fractionLength(0...1)).grouping(.never))
+        formatted(.number.precision(.fractionLength(0...2)).grouping(.never))
     }
 }
 
