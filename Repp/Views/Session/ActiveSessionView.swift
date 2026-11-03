@@ -77,6 +77,13 @@ struct ActiveSessionView: View {
                 .padding(.bottom, 24)
             }
             .scrollDismissesKeyboard(.interactively)
+            .toolbar {
+                // I tastierini numerici non hanno un tasto Invio.
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Fine") { hideKeyboard() }
+                }
+            }
 
             bottomPanel
         }
@@ -297,9 +304,10 @@ struct ActiveSessionView: View {
             repsText = "\(last.reps)"
         } else if let key = row.historyKey,
                   let previous = SessionHistory.lastPerformance(of: key, in: context, excluding: session),
-                  let first = previous.orderedSets.first {
-            kgText = first.weightKg.kgString
-            repsText = "\(first.reps)"
+                  let lastSet = previous.orderedSets.last {
+            // L'ultima serie dell'ultima volta: è il punto da cui ripartire per progredire.
+            kgText = lastSet.weightKg.kgString
+            repsText = "\(lastSet.reps)"
         } else {
             let isPlanned = !row.isExerciseSubstitution && !row.isMachineChange
             kgText = (isPlanned ? row.plannedItem?.targetWeightKg : nil)?.kgString ?? ""
@@ -694,7 +702,7 @@ private struct ValueField: View {
                     Image(systemName: "minus").frame(width: 36, height: 44)
                 }
                 .accessibilityLabel("Meno")
-                TextField("0", text: $text)
+                TextField("—", text: $text)
                     .keyboardType(keyboard)
                     .multilineTextAlignment(.center)
                     .font(.display(24, weight: .bold))

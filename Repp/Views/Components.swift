@@ -123,7 +123,7 @@ extension Equipment {
 }
 
 extension TemplateExercise {
-    /// "4 × 8 · 80 kg · riposo 1:30 · Panca"
+    /// "4 × 8 · 80 kg · riposo 1:30 · Panca · Bilanciere olimpico"
     var summary: String {
         var parts: [String] = []
         if let targetReps {
@@ -137,7 +137,8 @@ extension TemplateExercise {
         parts.append("riposo \(restSeconds.restString)")
         if let machine {
             parts.append(machine.name)
-        } else if let equipment {
+        }
+        if let equipment {
             parts.append(equipment.name)
         }
         return parts.joined(separator: " · ")

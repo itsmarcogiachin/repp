@@ -54,12 +54,16 @@ enum SessionHistory {
 }
 
 extension SessionExercise {
-    /// "4 serie · 80 kg × 8" (carico e ripetizioni della serie più pesante).
+    /// "3 serie · 80 kg × 8" se le serie sono uguali, altrimenti "2 serie · 62,5 kg × 10, 65 kg × 9".
     var setsSummary: String {
-        let count = sets.count
-        let label = count == 1 ? "1 serie" : "\(count) serie"
-        guard let top = sets.max(by: { $0.weightKg < $1.weightKg }) else { return label }
-        return "\(label) · \(top.weightKg.kgString) kg × \(top.reps)"
+        let ordered = orderedSets
+        let label = ordered.count == 1 ? "1 serie" : "\(ordered.count) serie"
+        guard let first = ordered.first else { return label }
+        if ordered.allSatisfy({ $0.weightKg == first.weightKg && $0.reps == first.reps }) {
+            return "\(label) · \(first.weightKg.kgString) kg × \(first.reps)"
+        }
+        let detail = ordered.prefix(5).map { "\($0.weightKg.kgString) kg × \($0.reps)" }.joined(separator: ", ")
+        return "\(label) · \(detail)\(ordered.count > 5 ? "…" : "")"
     }
 
     /// "Panca · Bilanciere olimpico"
