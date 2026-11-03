@@ -87,12 +87,11 @@ final class ExerciseNote {
     var isPinned: Bool
     var createdAt: Date
 
-    init(exercise: Exercise, text: String, isPinned: Bool = false, session: WorkoutSession? = nil) {
+    /// Esercizio e sessione si impostano dopo `context.insert`.
+    init(text: String, isPinned: Bool = false) {
         self.id = UUID()
-        self.exercise = exercise
         self.text = text
         self.isPinned = isPinned
-        self.session = session
         self.createdAt = .now
     }
 }
@@ -135,6 +134,9 @@ final class TemplateExercise {
     var targetReps: Int?
     var targetWeightKg: Double?
     var restSeconds: Int
+    /// Le righe di sessione nate da questo esercizio della scheda (anche quelle sostituite).
+    @Relationship(deleteRule: .nullify, inverse: \SessionExercise.plannedItem)
+    var sessionRows: [SessionExercise] = []
 
     /// Le relazioni (esercizio, macchina, attrezzo, scheda) si impostano dopo `context.insert`, con `configure(exercise:template:)`.
     init(position: Int, targetSets: Int = 3, targetReps: Int? = 8, targetWeightKg: Double? = nil, restSeconds: Int = 90) {
@@ -164,10 +166,13 @@ final class WorkoutSession {
     var endedAt: Date?
     @Relationship(deleteRule: .cascade, inverse: \SessionExercise.session)
     var exercises: [SessionExercise] = []
+    /// Le note scritte durante questa sessione.
+    @Relationship(deleteRule: .cascade, inverse: \ExerciseNote.session)
+    var notes: [ExerciseNote] = []
 
-    init(template: WorkoutTemplate?, startedAt: Date = .now) {
+    /// La scheda si imposta dopo `context.insert`.
+    init(startedAt: Date = .now) {
         self.id = UUID()
-        self.template = template
         self.startedAt = startedAt
     }
 
@@ -191,14 +196,18 @@ final class SessionExercise {
     @Relationship(deleteRule: .cascade, inverse: \SessionSet.sessionExercise)
     var sets: [SessionSet] = []
 
-    init(session: WorkoutSession, plannedItem: TemplateExercise?, exercise: Exercise, machine: Machine?, equipment: Equipment?, position: Int) {
+    /// Le relazioni si impostano dopo `context.insert`, con `configure(...)`.
+    init(position: Int) {
         self.id = UUID()
+        self.position = position
+    }
+
+    func configure(session: WorkoutSession, plannedItem: TemplateExercise?, exercise: Exercise, machine: Machine?, equipment: Equipment?) {
         self.session = session
         self.plannedItem = plannedItem
         self.exercise = exercise
         self.machine = machine
         self.equipment = equipment
-        self.position = position
     }
 
     /// Esercizio diverso da quello della scheda.
@@ -236,9 +245,9 @@ final class SessionSet {
     var restSeconds: Int?
     var completedAt: Date
 
-    init(sessionExercise: SessionExercise, setNumber: Int, weightKg: Double, reps: Int, quality: SetQuality? = nil, restSeconds: Int? = nil) {
+    /// La riga di sessione (`sessionExercise`) si imposta dopo `context.insert`.
+    init(setNumber: Int, weightKg: Double, reps: Int, quality: SetQuality? = nil, restSeconds: Int? = nil) {
         self.id = UUID()
-        self.sessionExercise = sessionExercise
         self.setNumber = setNumber
         self.weightKg = weightKg
         self.reps = reps

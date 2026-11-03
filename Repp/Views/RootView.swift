@@ -8,7 +8,7 @@ struct RootView: View {
         TabView {
             TemplatesListView()
                 .tabItem { Label("Schede", systemImage: "list.bullet.rectangle") }
-            PlaceholderScreen(title: "Sessione", subtitle: "L'allenamento in corso")
+            SessionTabView()
                 .tabItem { Label("Sessione", systemImage: "timer") }
             PlaceholderScreen(title: "Storico", subtitle: "Le tue sessioni e i progressi")
                 .tabItem { Label("Storico", systemImage: "chart.bar") }
