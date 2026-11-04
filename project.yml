@@ -12,6 +12,8 @@ settings:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
+    # Team di firma (Personal Team di Marco): qui, perché xcodegen sovrascrive quello scelto in Xcode.
+    DEVELOPMENT_TEAM: R347QFK47Z
 targets:
   Repp:
     type: application
