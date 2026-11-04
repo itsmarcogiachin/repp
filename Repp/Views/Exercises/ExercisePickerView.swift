@@ -47,28 +47,14 @@ struct ExercisePickerView: View {
                     }
                     .listRowBackground(Color.clear)
                 } else {
-                    ForEach(filtered) { exercise in
-                        Button {
-                            toggle(exercise)
-                        } label: {
-                            HStack(spacing: 12) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(exercise.name)
-                                        .foregroundStyle(Theme.text)
-                                    Text(subtitle(for: exercise))
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.textSecondary)
-                                }
-                                Spacer()
-                                Image(systemName: isSelected(exercise) ? "checkmark.circle.fill" : "circle")
-                                    .font(.title3)
-                                    .foregroundStyle(isSelected(exercise) ? Theme.pink : Theme.silver)
+                    ForEach(sections, id: \.title) { section in
+                        Section {
+                            ForEach(section.exercises) { exercise in
+                                exerciseRow(exercise)
                             }
-                            .contentShape(Rectangle())
+                        } header: {
+                            SectionLabel("\(section.title) · \(section.exercises.count)")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(isSelected(exercise) ? .isSelected : [])
-                        .listRowBackground(Theme.surface)
                     }
                 }
             }
@@ -105,6 +91,44 @@ struct ExercisePickerView: View {
         .preferredColorScheme(.dark)
     }
 
+    /// Esercizi divisi per macchina o attrezzo; quelli senza vanno in "Corpo libero", in fondo.
+    private var sections: [(title: String, exercises: [Exercise])] {
+        let grouped = Dictionary(grouping: filtered) { exercise in
+            exercise.defaultMachine?.name ?? exercise.defaultEquipment?.name ?? ""
+        }
+        return grouped
+            .map { (title: $0.key.isEmpty ? "Corpo libero" : $0.key, exercises: $0.value) }
+            .sorted { lhs, rhs in
+                if lhs.title == "Corpo libero" { return false }
+                if rhs.title == "Corpo libero" { return true }
+                return lhs.title.localizedCompare(rhs.title) == .orderedAscending
+            }
+    }
+
+    private func exerciseRow(_ exercise: Exercise) -> some View {
+        Button {
+            toggle(exercise)
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exercise.name)
+                        .foregroundStyle(Theme.text)
+                    Text(subtitle(for: exercise))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+                Image(systemName: isSelected(exercise) ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isSelected(exercise) ? Theme.pink : Theme.silver)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected(exercise) ? .isSelected : [])
+        .listRowBackground(Theme.surface)
+    }
+
     private func isSelected(_ exercise: Exercise) -> Bool {
         selected.contains { $0.id == exercise.id }
     }
@@ -121,7 +145,8 @@ struct ExercisePickerView: View {
         if alreadyInTemplate.contains(exercise.id) {
             return "Già nella scheda"
         }
-        let parts = [exercise.muscleGroup, exercise.defaultMachine?.name ?? exercise.defaultEquipment?.name].compactMap { $0 }
+        // La macchina (o l'attrezzo) è già nel titolo della sezione: qui il gruppo e l'eventuale attrezzo in più.
+        let parts = [exercise.muscleGroup, exercise.defaultMachine == nil ? nil : exercise.defaultEquipment?.name].compactMap { $0 }
         return parts.isEmpty ? " " : parts.joined(separator: " · ")
     }
 }

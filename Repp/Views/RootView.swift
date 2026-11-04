@@ -19,6 +19,7 @@ struct RootView: View {
         }
         .task {
             SeedData.insertIfNeeded(into: modelContext)
+            SeedExercises.insertIfNeeded(into: modelContext)
             // Se l'app si riapre a metà allenamento, si torna dritti alla sessione.
             let active = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endedAt == nil })
             if ((try? modelContext.fetchCount(active)) ?? 0) > 0 {

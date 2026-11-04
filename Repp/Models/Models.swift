@@ -65,6 +65,8 @@ final class Exercise {
     var defaultEquipment: Equipment?
     @Relationship(deleteRule: .cascade, inverse: \ExerciseNote.exercise)
     var notes: [ExerciseNote] = []
+    /// Esercizio del catalogo di partenza (non creato dall'utente).
+    var isBuiltIn: Bool = false
     var createdAt: Date
 
     init(name: String, muscleGroup: String? = nil, defaultMachine: Machine? = nil, defaultEquipment: Equipment? = nil) {
