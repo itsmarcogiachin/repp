@@ -107,9 +107,31 @@ extension Int {
     }
 }
 
-/// Gruppi muscolari per filtrare il catalogo.
+/// Gruppi muscolari: ogni esercizio ne ha uno solo.
 enum MuscleGroup {
-    static let all = ["Petto", "Dorso", "Spalle", "Gambe", "Glutei", "Bicipiti", "Tricipiti", "Addome", "Altro"]
+    static let all = ["Petto", "Schiena", "Spalle", "Bicipiti", "Tricipiti", "Gambe"]
+}
+
+/// Piccolo badge con il gruppo muscolare dell'esercizio.
+struct GroupBadge: View {
+    let group: String?
+
+    init(_ group: String?) {
+        self.group = group
+    }
+
+    var body: some View {
+        if let group, !group.isEmpty {
+            Text(group)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Theme.silver)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Theme.surface2, in: Capsule())
+                .overlay(Capsule().stroke(Theme.line, lineWidth: 1))
+                .fixedSize()
+        }
+    }
 }
 
 extension Equipment {

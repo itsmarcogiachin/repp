@@ -84,7 +84,7 @@ struct SessionDetailView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.pinkText)
             } else if row.isMachineChange {
-                Label("Su un'altra macchina rispetto alla scheda", systemImage: "arrow.triangle.2.circlepath")
+                Label("Con un'altra macchina o attrezzo rispetto alla scheda", systemImage: "arrow.triangle.2.circlepath")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.pinkText)
             } else if row.plannedItem == nil {
@@ -94,6 +94,12 @@ struct SessionDetailView: View {
             }
             if let setup = row.setupLabel {
                 Text(setup)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+
+            if !row.warmupSets.isEmpty {
+                Text("Riscaldamento: " + row.orderedWarmupSets.map { "\($0.weightKg.kgString) kg × \($0.reps)" }.joined(separator: ", "))
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
             }

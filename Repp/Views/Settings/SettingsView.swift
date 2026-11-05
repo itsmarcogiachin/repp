@@ -124,7 +124,8 @@ enum DataExport {
     private struct TemplateItem: Encodable { let name: String; let exercises: [TemplateExerciseItem] }
     private struct TemplateExerciseItem: Encodable { let exercise: String?; let machine: String?; let equipment: String?; let sets: Int; let reps: Int?; let weightKg: Double?; let restSeconds: Int }
     private struct SessionItem: Encodable { let template: String?; let startedAt: Date; let endedAt: Date?; let exercises: [SessionExerciseItem] }
-    private struct SessionExerciseItem: Encodable { let exercise: String?; let plannedExercise: String?; let machine: String?; let equipment: String?; let substitution: Bool; let machineChange: Bool; let sets: [SetItem] }
+    private struct SessionExerciseItem: Encodable { let exercise: String?; let plannedExercise: String?; let machine: String?; let equipment: String?; let substitution: Bool; let machineChange: Bool; let warmups: [WarmupItem]; let sets: [SetItem] }
+    private struct WarmupItem: Encodable { let weightKg: Double; let reps: Int; let completedAt: Date }
     private struct SetItem: Encodable { let number: Int; let weightKg: Double; let reps: Int; let quality: String?; let completedAt: Date }
 
     static func write(from context: ModelContext) throws -> URL {
@@ -154,6 +155,9 @@ enum DataExport {
                                 SessionExerciseItem(exercise: row.exercise?.name, plannedExercise: row.plannedItem?.exercise?.name,
                                                     machine: row.machine?.name, equipment: row.equipment?.name,
                                                     substitution: row.isExerciseSubstitution, machineChange: row.isMachineChange,
+                                                    warmups: row.orderedWarmupSets.map {
+                                                        WarmupItem(weightKg: $0.weightKg, reps: $0.reps, completedAt: $0.completedAt)
+                                                    },
                                                     sets: row.orderedSets.map {
                                                         SetItem(number: $0.setNumber, weightKg: $0.weightKg, reps: $0.reps,
                                                                 quality: $0.qualityRaw, completedAt: $0.completedAt)

@@ -64,7 +64,8 @@ struct ActiveSessionView: View {
                         onNotes: { sheet = .notes },
                         onNext: goToNext,
                         onQuality: setQuality,
-                        onDeleteSet: deleteSet
+                        onDeleteSet: deleteSet,
+                        onDeleteWarmup: deleteWarmup
                     )
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
@@ -100,6 +101,7 @@ struct ActiveSessionView: View {
         .onChange(of: current?.id, initial: true) { prefill() }
         .onChange(of: current?.exercise?.id) { prefill() }
         .onChange(of: current?.machine?.id) { prefill() }
+        .onChange(of: current?.equipment?.id) { prefill() }
         .task(id: restEndsAt) {
             let wait = restEndsAt - Date.now.timeIntervalSince1970
             guard wait > 0 else { return }
@@ -277,10 +279,27 @@ struct ActiveSessionView: View {
                 ValueField(title: "Carico totale (kg)", text: $kgText, keyboard: .decimalPad, step: loadStep)
                 ValueField(title: "Ripetizioni", text: $repsText, keyboard: .numberPad, step: 1)
             }
-            Button(logButtonTitle, action: logSet)
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(current == nil || reps <= 0)
-                .opacity(current == nil || reps <= 0 ? 0.4 : 1)
+            HStack(spacing: 10) {
+                // Il riscaldamento non avvia il riposo e non conta nelle serie né nei progressi.
+                Button(action: logWarmup) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "flame")
+                            .font(.body)
+                        Text("Riscald.")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(Theme.text)
+                    .frame(width: 76, height: 56)
+                    .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Segna serie di riscaldamento")
+                Button(logButtonTitle, action: logSet)
+                    .buttonStyle(PrimaryButtonStyle())
+            }
+            .disabled(current == nil || reps <= 0)
+            .opacity(current == nil || reps <= 0 ? 0.4 : 1)
         }
     }
 
@@ -332,6 +351,18 @@ struct ActiveSessionView: View {
         if askQuality { qualitySetID = set.id }
         hideKeyboard()
         startRest(seconds: row.restSeconds)
+    }
+
+    private func logWarmup() {
+        guard let row = current, reps > 0 else { return }
+        let warmup = WarmupSet(weightKg: kg, reps: reps)
+        context.insert(warmup)
+        warmup.sessionExercise = row
+        hideKeyboard()
+    }
+
+    private func deleteWarmup(_ warmup: WarmupSet) {
+        context.delete(warmup)
     }
 
     private func setQuality(_ set: SessionSet, _ quality: SetQuality) {
@@ -451,6 +482,7 @@ private struct ExerciseSessionCard: View {
     let onNext: () -> Void
     let onQuality: (SessionSet, SetQuality) -> Void
     let onDeleteSet: (SessionSet) -> Void
+    let onDeleteWarmup: (WarmupSet) -> Void
 
     private var notes: [ExerciseNote] {
         (row.exercise?.notes ?? []).sorted { $0.createdAt > $1.createdAt }
@@ -465,15 +497,18 @@ private struct ExerciseSessionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(row.exercise?.name ?? "Esercizio")
-                    .font(.display(26, weight: .bold))
-                    .metallic()
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(row.exercise?.name ?? "Esercizio")
+                        .font(.display(26, weight: .bold))
+                        .metallic()
+                    GroupBadge(row.exercise?.muscleGroup)
+                }
                 if row.isExerciseSubstitution, let planned = row.plannedItem?.exercise {
                     Label("Solo oggi al posto di \(planned.name)", systemImage: "arrow.triangle.2.circlepath")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.pinkText)
                 } else if row.isMachineChange {
-                    Label("Solo oggi su un'altra macchina", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Solo oggi con un'altra macchina o attrezzo", systemImage: "arrow.triangle.2.circlepath")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.pinkText)
                 } else if row.plannedItem == nil {
@@ -549,8 +584,8 @@ private struct ExerciseSessionCard: View {
                 result = ("Ultima volta (\(day)) l'hai sostituito", detail, true)
                 shownRowID = sub.id
             } else if let change = last.rows.first(where: \.isMachineChange) {
-                let detail = ["su \(change.machine?.name ?? "nessuna macchina")", change.setsSummary].joined(separator: " · ")
-                result = ("Ultima volta (\(day)) hai cambiato macchina", detail, true)
+                let detail = ["con \(change.setupLabel ?? "nessuna macchina")", change.setsSummary].joined(separator: " · ")
+                result = ("Ultima volta (\(day)) hai cambiato macchina o attrezzo", detail, true)
                 shownRowID = change.id
             } else if let same = last.rows.first {
                 result = ("Ultima volta (\(day))", same.setsSummary, false)
@@ -563,7 +598,7 @@ private struct ExerciseSessionCard: View {
            let key = row.historyKey,
            let previous = SessionHistory.lastPerformance(of: key, in: context, excluding: session),
            previous.id != shownRowID {
-            let name = [row.exercise?.name, row.machine.map { "su \($0.name)" }].compactMap { $0 }.joined(separator: " ")
+            let name = [row.exercise?.name, row.setupLabel.map { "con \($0)" }].compactMap { $0 }.joined(separator: " ")
             let line = "\(name): \(previous.session?.startedAt.shortDay ?? "") · \(previous.setsSummary)"
             if let current = result {
                 result = (current.0, current.1 + "\nCon questa variante: " + line, current.2)
@@ -602,6 +637,30 @@ private struct ExerciseSessionCard: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(Theme.textSecondary)
             .padding(.bottom, 8)
+
+            ForEach(row.orderedWarmupSets) { warmup in
+                HStack {
+                    Image(systemName: "flame")
+                        .font(.caption)
+                        .frame(width: 48, alignment: .leading)
+                    Text(warmup.weightKg.kgString)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("\(warmup.reps)")
+                        .frame(width: 56, alignment: .leading)
+                    Text("Riscald.")
+                        .font(.caption)
+                        .frame(width: 88, alignment: .trailing)
+                }
+                .font(.subheadline)
+                .foregroundStyle(Theme.textSecondary)
+                .monospacedDigit()
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+                .contextMenu {
+                    Button("Elimina riscaldamento", role: .destructive) { onDeleteWarmup(warmup) }
+                }
+                Divider().overlay(Theme.line)
+            }
 
             if row.sets.isEmpty {
                 Text("Nessuna serie ancora. Segna la prima qui sotto.")

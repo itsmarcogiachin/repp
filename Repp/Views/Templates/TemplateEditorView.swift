@@ -142,6 +142,7 @@ private struct TemplateItemRow: View {
                             .foregroundStyle(Theme.textSecondary)
                     }
                     Spacer()
+                    GroupBadge(item.exercise?.muscleGroup)
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .foregroundStyle(Theme.textSecondary)
                 }

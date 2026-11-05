@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// Catalogo esercizi: ricerca, filtro per gruppo muscolare, selezione multipla e creazione di un esercizio nuovo.
+/// Catalogo esercizi: ricerca, filtro per uno o più gruppi muscolari, selezione multipla e creazione di un esercizio nuovo.
 struct ExercisePickerView: View {
     let alreadyInTemplate: Set<UUID>
     let onAdd: ([Exercise]) -> Void
@@ -9,13 +9,13 @@ struct ExercisePickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
     @State private var search = ""
-    @State private var group: String?
+    @State private var groups: Set<String> = []
     @State private var selected: [Exercise] = []
     @State private var showingNew = false
 
     private var filtered: [Exercise] {
         exercises.filter { exercise in
-            (group == nil || exercise.muscleGroup == group)
+            (groups.isEmpty || groups.contains(exercise.muscleGroup ?? ""))
                 && (search.isEmpty || exercise.name.localizedCaseInsensitiveContains(search))
         }
     }
@@ -26,9 +26,16 @@ struct ExercisePickerView: View {
                 Section {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            FilterChip(title: "Tutti", isSelected: group == nil) { group = nil }
+                            FilterChip(title: "Tutti", isSelected: groups.isEmpty) { groups = [] }
                             ForEach(MuscleGroup.all, id: \.self) { name in
-                                FilterChip(title: name, isSelected: group == name) { group = name }
+                                // Si possono accendere più gruppi insieme, es. Bicipiti + Tricipiti.
+                                FilterChip(title: name, isSelected: groups.contains(name)) {
+                                    if groups.contains(name) {
+                                        groups.remove(name)
+                                    } else {
+                                        groups.insert(name)
+                                    }
+                                }
                             }
                         }
                         .padding(.horizontal, 16)
@@ -83,7 +90,7 @@ struct ExercisePickerView: View {
                 }
             }
             .sheet(isPresented: $showingNew) {
-                NewExerciseView(initialGroup: group) { exercise in
+                NewExerciseView(initialGroup: groups.count == 1 ? groups.first : nil) { exercise in
                     selected.append(exercise)
                 }
             }
@@ -118,6 +125,7 @@ struct ExercisePickerView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
+                GroupBadge(exercise.muscleGroup)
                 Image(systemName: isSelected(exercise) ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
                     .foregroundStyle(isSelected(exercise) ? Theme.pink : Theme.silver)
@@ -145,9 +153,12 @@ struct ExercisePickerView: View {
         if alreadyInTemplate.contains(exercise.id) {
             return "Già nella scheda"
         }
-        // La macchina (o l'attrezzo) è già nel titolo della sezione: qui il gruppo e l'eventuale attrezzo in più.
-        let parts = [exercise.muscleGroup, exercise.defaultMachine == nil ? nil : exercise.defaultEquipment?.name].compactMap { $0 }
-        return parts.isEmpty ? " " : parts.joined(separator: " · ")
+        // La macchina (o l'attrezzo) è già nel titolo della sezione: qui l'attrezzo, che distingue le varianti
+        // con lo stesso nome (es. Lat machine con sbarra larga o con presa stretta).
+        if exercise.defaultMachine != nil {
+            return exercise.defaultEquipment?.name ?? "Senza attrezzo"
+        }
+        return " "
     }
 }
 
@@ -173,7 +184,7 @@ struct NewExerciseView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Es. Panca piana bilanciere", text: $name)
+                    TextField("Es. Panca piana", text: $name)
                 } header: {
                     Text("Nome")
                 }
@@ -190,7 +201,7 @@ struct NewExerciseView: View {
                         ForEach(equipment) { Text($0.label).tag(Optional($0)) }
                     }
                 } footer: {
-                    Text("Macchina e attrezzo si possono cambiare in ogni scheda e, solo per una volta, durante la sessione.")
+                    Text("Nel nome metti solo l'esercizio. Se lo fai con macchine o attrezzi diversi, crealo una volta per ogni variante. Macchina e attrezzo si possono cambiare in ogni scheda e, solo per una volta, durante la sessione.")
                 }
             }
             .reppListStyle()

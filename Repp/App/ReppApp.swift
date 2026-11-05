@@ -24,7 +24,8 @@ enum ReppSchema {
         TemplateExercise.self,
         WorkoutSession.self,
         SessionExercise.self,
-        SessionSet.self
+        SessionSet.self,
+        WarmupSet.self
     ]
 
     static let container: ModelContainer = {

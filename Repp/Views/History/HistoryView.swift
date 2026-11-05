@@ -46,7 +46,7 @@ struct HistoryView: View {
                 guard let key = row.historyKey, !seen.contains(key) else { continue }
                 seen.insert(key)
                 let best = allRows(for: key).flatMap(\.sets).map(\.weightKg).max() ?? 0
-                let machine = row.machine?.name ?? row.equipment?.name ?? "senza macchina"
+                let machine = row.setupLabel ?? "senza macchina"
                 result.append((key, row.exercise?.name ?? "Esercizio", "\(machine) · migliore \(best.kgString) kg"))
             }
         }
@@ -214,7 +214,7 @@ extension WorkoutSession {
             parts.append(substitutions == 1 ? "1 sostituzione" : "\(substitutions) sostituzioni")
         }
         if machineChanges > 0 {
-            parts.append(machineChanges == 1 ? "1 cambio macchina" : "\(machineChanges) cambi macchina")
+            parts.append(machineChanges == 1 ? "1 cambio macchina/attrezzo" : "\(machineChanges) cambi macchina/attrezzo")
         }
         return parts.joined(separator: " · ")
     }

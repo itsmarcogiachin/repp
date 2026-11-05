@@ -131,7 +131,8 @@ struct SessionSummaryView: View {
             parts.append("al posto di \(row.plannedItem?.exercise?.name ?? "")")
             if let setup = row.setupLabel { parts.append(setup) }
         } else if row.isMachineChange {
-            parts.append("su \(row.machine?.name ?? "nessuna macchina") invece che \(row.plannedItem?.machine?.name ?? "senza macchina")")
+            let planned = [row.plannedItem?.machine?.name, row.plannedItem?.equipment?.name].compactMap { $0 }.joined(separator: " · ")
+            parts.append("con \(row.setupLabel ?? "nessuna macchina") invece che \(planned.isEmpty ? "senza macchina" : planned)")
         } else {
             parts.append("aggiunto solo per oggi")
         }

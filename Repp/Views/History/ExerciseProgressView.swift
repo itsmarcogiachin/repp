@@ -2,32 +2,32 @@ import SwiftUI
 import SwiftData
 import Charts
 
-/// Progressi di un esercizio su una macchina: ogni macchina ha il suo storico, come un esercizio a sé.
+/// Progressi di un esercizio con una macchina e un attrezzo: ogni variante ha il suo storico, come un esercizio a sé.
 struct ExerciseProgressView: View {
     let key: HistoryKey
 
     @Environment(\.modelContext) private var context
-    @State private var machineID: UUID?
+    @State private var setup: SetupKey?
     @State private var allRows: [SessionExercise] = []
     @State private var substitutedCount = 0
     @State private var loaded = false
 
-    /// Righe di questo esercizio su questa macchina, dalla più recente.
+    /// Righe di questo esercizio con questa variante, dalla più recente.
     private var rows: [SessionExercise] {
-        allRows.filter { $0.machine?.id == machineID }
+        allRows.filter { $0.setupKey == setup }
     }
 
     private var exercise: Exercise? {
         allRows.first?.exercise
     }
 
-    /// Macchine usate con questo esercizio (nil = senza macchina).
-    private var machineOptions: [(id: UUID?, name: String)] {
-        var seen = Set<UUID?>()
-        var result: [(id: UUID?, name: String)] = []
-        for row in allRows where !seen.contains(row.machine?.id) {
-            seen.insert(row.machine?.id)
-            result.append((id: row.machine?.id, name: row.machine?.name ?? "Senza macchina"))
+    /// Varianti (macchina + attrezzo) usate con questo esercizio.
+    private var machineOptions: [(id: SetupKey, name: String)] {
+        var seen = Set<SetupKey>()
+        var result: [(id: SetupKey, name: String)] = []
+        for row in allRows where !seen.contains(row.setupKey) {
+            seen.insert(row.setupKey)
+            result.append((id: row.setupKey, name: row.setupLabel ?? "Senza macchina"))
         }
         return result
     }
@@ -58,10 +58,13 @@ struct ExerciseProgressView: View {
                     Text(exercise?.name ?? "Esercizio")
                         .font(.display(30))
                         .metallic()
-                    if let group = exercise?.muscleGroup {
-                        Text(group)
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.textSecondary)
+                    HStack(spacing: 8) {
+                        GroupBadge(exercise?.muscleGroup)
+                        if let label = rows.first?.setupLabel {
+                            Text(label)
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
                     }
                 }
 
@@ -69,13 +72,13 @@ struct ExerciseProgressView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(machineOptions, id: \.id) { option in
-                                FilterChip(title: option.name, isSelected: option.id == machineID) {
-                                    machineID = option.id
+                                FilterChip(title: option.name, isSelected: option.id == setup) {
+                                    setup = option.id
                                 }
                             }
                         }
                     }
-                    Text("Ogni macchina ha il suo storico, come un esercizio a sé.")
+                    Text("Ogni macchina o attrezzo ha il suo storico, come un esercizio a sé.")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -185,7 +188,7 @@ struct ExerciseProgressView: View {
     private func load() {
         guard !loaded else { return }
         loaded = true
-        machineID = key.machineID
+        setup = key.setup
         let finished = SessionHistory.finishedRows(in: context)
         allRows = finished.filter { $0.exercise?.id == key.exerciseID }
         let monthAgo = Date.now.addingTimeInterval(-30 * 24 * 3600)

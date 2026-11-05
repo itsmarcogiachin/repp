@@ -197,6 +197,9 @@ final class SessionExercise {
     var position: Int
     @Relationship(deleteRule: .cascade, inverse: \SessionSet.sessionExercise)
     var sets: [SessionSet] = []
+    /// Serie di riscaldamento: si vedono in sessione ma non contano nelle serie, nei progressi e nei record.
+    @Relationship(deleteRule: .cascade, inverse: \WarmupSet.sessionExercise)
+    var warmupSets: [WarmupSet] = []
 
     /// Le relazioni si impostano dopo `context.insert`, con `configure(...)`.
     init(position: Int) {
@@ -218,16 +221,24 @@ final class SessionExercise {
         return planned.id != exercise?.id
     }
 
-    /// Stesso esercizio ma su un'altra macchina: nello storico conta come una variante a sé.
+    /// Stesso esercizio ma con un'altra macchina o un altro attrezzo: nello storico conta come una variante a sé.
     var isMachineChange: Bool {
         guard let planned = plannedItem, !isExerciseSubstitution else { return false }
-        return planned.machine?.id != machine?.id
+        return planned.machine?.id != machine?.id || planned.equipment?.id != equipment?.id
     }
 
-    /// Chiave dello storico: esercizio + macchina.
+    /// Chiave dello storico: esercizio + macchina + attrezzo.
     var historyKey: HistoryKey? {
         guard let exercise else { return nil }
-        return HistoryKey(exerciseID: exercise.id, machineID: machine?.id)
+        return HistoryKey(exerciseID: exercise.id, machineID: machine?.id, equipmentID: equipment?.id)
+    }
+
+    var setupKey: SetupKey {
+        SetupKey(machineID: machine?.id, equipmentID: equipment?.id)
+    }
+
+    var orderedWarmupSets: [WarmupSet] {
+        warmupSets.sorted { $0.completedAt < $1.completedAt }
     }
 
     var orderedSets: [SessionSet] {
@@ -264,8 +275,35 @@ final class SessionSet {
     }
 }
 
-/// Lo storico è separato per esercizio e macchina: cambiare macchina è come cambiare esercizio.
+/// Serie di riscaldamento di un esercizio in sessione.
+@Model
+final class WarmupSet {
+    @Attribute(.unique) var id: UUID
+    var sessionExercise: SessionExercise?
+    var weightKg: Double
+    var reps: Int
+    var completedAt: Date
+
+    /// La riga di sessione (`sessionExercise`) si imposta dopo `context.insert`.
+    init(weightKg: Double, reps: Int) {
+        self.id = UUID()
+        self.weightKg = weightKg
+        self.reps = reps
+        self.completedAt = .now
+    }
+}
+
+/// Lo storico è separato per esercizio, macchina e attrezzo: cambiarli è come cambiare esercizio.
 struct HistoryKey: Hashable {
     let exerciseID: UUID
     let machineID: UUID?
+    let equipmentID: UUID?
+
+    var setup: SetupKey { SetupKey(machineID: machineID, equipmentID: equipmentID) }
+}
+
+/// Macchina + attrezzo usati per un esercizio.
+struct SetupKey: Hashable {
+    let machineID: UUID?
+    let equipmentID: UUID?
 }

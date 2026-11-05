@@ -28,7 +28,12 @@ enum SeedData {
         ("Manubri", nil),
         ("Bilanciere olimpico", 20),
         ("Bilanciere", 10),
-        ("Bilanciere Z", 8)
+        ("Bilanciere Z", 8),
+        ("Maniglia", nil),
+        ("Corda", nil),
+        ("Sbarra corta", nil),
+        ("Sbarra larga", nil),
+        ("Presa stretta", nil)
     ]
 
     /// Inserisce i dati di partenza solo se il database è vuoto.
@@ -41,6 +46,16 @@ enum SeedData {
             context.insert(Machine(name: name, isBuiltIn: true))
         }
         for item in equipment {
+            context.insert(Equipment(name: item.name, weightKg: item.weightKg, isBuiltIn: true))
+        }
+        try? context.save()
+    }
+
+    /// Aggiunge gli attrezzi di partenza che mancano (per chi aveva già l'app prima che fossero aggiunti).
+    @MainActor
+    static func addMissingEquipment(into context: ModelContext) {
+        let existing = Set(((try? context.fetch(FetchDescriptor<Equipment>())) ?? []).map { $0.name.lowercased() })
+        for item in equipment where !existing.contains(item.name.lowercased()) {
             context.insert(Equipment(name: item.name, weightKg: item.weightKg, isBuiltIn: true))
         }
         try? context.save()
