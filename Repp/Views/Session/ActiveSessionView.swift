@@ -44,6 +44,11 @@ struct ActiveSessionView: View {
         Int(repsText) ?? 0
     }
 
+    /// Cambia quando cambia esercizio, macchina o attrezzo della riga corrente: si riprecompilano kg e ripetizioni.
+    private var prefillKey: [UUID?] {
+        [current?.id, current?.exercise?.id, current?.machine?.id, current?.equipment?.id]
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -98,10 +103,7 @@ struct ActiveSessionView: View {
                 currentID = (rows.first { $0.sets.count < $0.targetSets } ?? rows.first)?.id
             }
         }
-        .onChange(of: current?.id, initial: true) { prefill() }
-        .onChange(of: current?.exercise?.id) { prefill() }
-        .onChange(of: current?.machine?.id) { prefill() }
-        .onChange(of: current?.equipment?.id) { prefill() }
+        .onChange(of: prefillKey, initial: true) { prefill() }
         .task(id: restEndsAt) {
             let wait = restEndsAt - Date.now.timeIntervalSince1970
             guard wait > 0 else { return }
